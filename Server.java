@@ -53,10 +53,10 @@ public class Server {
                     // Perform authentication logic here
                     // For example, check if the username and password match some stored values
                     if (utilizadores.containsKey(username) && utilizadores.get(username).equals(password)) {
-                        writer.write("Authentication failed");
+                        writer.write("Registo sem sucesso. Cliente ja existente");
                     } else {
                         utilizadores.put(username,password);
-                        writer.write("Authentication successful");
+                        writer.write("Registo com sucesso");
                     }
 
                     // Add a newline to indicate the end of the response

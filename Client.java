@@ -1,4 +1,7 @@
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Scanner;
@@ -69,7 +72,7 @@ public class Client
         scanner.close();
     }
 
-    public static void menu3() // Enviar tarefa, saída (após autenticação)
+    public static void menu3(DataInputStream in, DataOutputStream out) // Enviar tarefa, saída (após autenticação)
     {
         Scanner scanner = new Scanner(System.in);
 
@@ -85,7 +88,7 @@ public class Client
                 sair();
 
             case 1:
-                tarefa();
+                tarefa(scanner, in, out);
                 break;
 
             default:
@@ -151,7 +154,7 @@ public class Client
             System.out.println(new String(messageIn.content));
 
             // Se a autenticação for bem sucedida
-            if (messageIn.type == 0) menu3();
+            if (messageIn.type == 0) menu3(in, out);
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -163,9 +166,39 @@ public class Client
         // Desconectar o cliente?
     }
 
-    public static void tarefa()
+    public static void tarefa(Scanner scanner, DataInputStream in, DataOutputStream out)
     {
-        // Pedir para o servidor executar uma tarefa
+        try
+        {
+            // Ler input do utilizador
+            System.out.println("Caminho para o ficheiro a executar: ");
+            scanner.nextLine();
+            Path path1 = Paths.get(scanner.nextLine());
+
+            // Enviar mensagem com a tarefa como conteúdo
+            byte[] content = Files.readAllBytes(path1);
+            Message messageOut = new Message(2, content);
+            messageOut.serialize(out);
+            out.flush();
+
+            // Receber resultado da execução da tarefa
+            Message messageIn = Message.deserialize(in);
+            System.out.println("Mensagem do tipo: " + messageIn.type);
+
+            // Se a execução devolver o resutlado, escrevê-lo num ficheiro
+            if (messageIn.type == 2)
+            {
+                System.out.println("Caminho para o filcheiro com o resultado: ");
+                scanner.nextLine();
+                Path path2 = Paths.get(scanner.nextLine());
+
+                Files.write(path2, messageIn.content);
+                System.out.println("Tarefa terminada com sucesso.");
+            }
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /* ------------------------------------------------------
@@ -193,96 +226,3 @@ public class Client
 }
 
 
-
-
-/*
-
-try
-        {
-            Socket socket = new Socket("localhost", 12345);
-
-            DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-            DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-
-            Scanner scanner = new Scanner(System.in);
-
-            System.out.println("1-Registo");
-            System.out.println("2-Autenticação");
-            System.out.println("0-Sair");
-            System.out.print("Digite uma das opções: ");
-
-            try
-            {
-                int option = scanner.nextInt();
-
-                // REGISTO DE UM NOVO CLIENTE
-                if (option == 1)
-                {
-                    // Ler input do utilizador
-                    System.out.println("Nome de utilizador: ");
-                    scanner.nextLine();
-                    String username = scanner.nextLine();
-                    System.out.println("Palavra-passe: ");
-                    String password = scanner.nextLine();
-
-                    // Enviar mensagem para registo no servidor
-                    String s = username + "," + password;
-                    Message messageOut = new Message(0, s.getBytes());
-                    messageOut.serialize(out);
-                    out.flush();
-
-                    // Receber resultado do registo
-                    Message messageIn = Message.deserialize(in);
-                    System.out.println(new String(messageIn.content));
-                }
-
-                // AUTENTICAÇÃO DE UM CLIENTE
-                else if (option == 2) {
-
-                    // Ler input do utilizador
-                    System.out.println("Nome de utilizador: ");
-                    scanner.nextLine();
-                    String username = scanner.nextLine();
-                    System.out.println("Palavra-passe: ");
-                    String password = scanner.nextLine();
-
-                    // Enviar mensagem para autenticação no servidor
-                    String s = username + "," + password;
-                    Message messageOut = new Message(1, s.getBytes());
-                    messageOut.serialize(out);
-                    out.flush();
-
-                    // Receber resultado da autenticação
-                    Message messageIn = Message.deserialize(in);
-                    System.out.println(new String(messageIn.content));
-                }
-
-                // SAIR
-                else if (option == 0)
-                {
-                    // Desconectar o cliente?
-                }
-
-                // OPÇÃO INVÁLIDA
-                else
-                {
-                    System.out.println("Opção inválida.");
-                }
-
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
-            finally {
-                scanner.close();
-            }
-        }
-        catch (UnknownHostException e) {
-            throw new RuntimeException(e);
-        }
-        catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-
- */

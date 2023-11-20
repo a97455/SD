@@ -21,7 +21,6 @@ class ServerWorker implements Runnable
     @Override
     public void run()
     {
-        utilizadores.put("lara","123");
 
         try
         {
@@ -112,96 +111,6 @@ class ServerWorker implements Runnable
         }
     }
 }
-
-/*
-    @Override
-    public void run()
-    {
-        try
-        {
-        */
-            /* REGISTO DE UM CLIENTE */
-/*
-            String mensagem;
-            while ((mensagem = reader.readLine()) != null)
-            {
-                // Formato da mensagem do cliente "username,password"
-                String[] parts = mensagem.split(",");
-                String username = parts[0];
-                String password = parts[1];
-
-                // Autenticação do login: se username e a password correspondem aos valores armazenados
-                if (utilizadores.containsKey(username) && utilizadores.get(username).equals(password))
-                {
-                    writer.write("Registo sem sucesso. Cliente ja existente");
-                }
-                else
-                {
-                    utilizadores.put(username,password);
-                    writer.write("Registo com sucesso");
-                }
-
-                // Add a newline to indicate the end of the response
-                writer.newLine();
-                writer.flush(); // Ensure the response is sent immediately
-            }
-*/
-            /* ENVIO DE UMA TAREFA */
-/*
-            try
-            {
-                // Receção da tarefa
-                byte[] job = new byte[1000];
-                job = reader.read();
-
-                // Execução da tarefa
-                byte[] result = JobFunction.execute(job);
-
-                // Sucesso e envio do resultado ao cliente
-                System.err.println("Tarefa executada com successo. Resultado " + result.length + " bytes");
-                writer.write(result);
-
-            }
-            catch (JobFunctionException e)
-            {
-                // Insucesso e mensagem de erro
-                System.err.println("Tarefa sem sucesso. Código=" + e.getCode() + " Mensagem=" + e.getMessage());
-            }
-
-            // Close streams and socket
-            inputStream.close();
-            outputStream.close();
-            socket.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
-            catch (IOException e)
-    {
-        e.printStackTrace();
-    }
-
-            finally
-    {
-        try
-        {
-            clientSocket.close();
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-    }
-}
-
-    }
-            }
-
-*/
-
-
 
 
 public class Server

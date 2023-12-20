@@ -11,7 +11,7 @@ class ServerWorker implements Runnable
 {
     private Socket socket;
     private Map<String, String> utilizadores;
-    private static int capacity = 1000;
+    private static int capacity = 1024;
 
     public ServerWorker(Socket socket, Map<String,String> utilizadores)
     {

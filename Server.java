@@ -48,7 +48,7 @@ class ServerWorker implements Runnable
                         // utilizadores.forEach((key, value) -> System.out.println(key + " : " + value));
                     }
 
-                    Message messageOut = new Message(type, resposta.getBytes());
+                    Message messageOut = new Message(type, resposta.getBytes(), messageIn.numMensagem);
                     messageOut.serialize(out);
                     out.flush();
                 }
@@ -72,7 +72,7 @@ class ServerWorker implements Runnable
                         resposta = "Não é possível fazer a autenticação.";
                     }
 
-                    Message messageOut = new Message(type, resposta.getBytes());
+                    Message messageOut = new Message(type, resposta.getBytes(),messageIn.numMensagem);
                     messageOut.serialize(out);
                     out.flush();
 
@@ -84,7 +84,7 @@ class ServerWorker implements Runnable
                         // System.err.println("Tarefa executada com successo. Resultado " + result.length + " bytes");
 
                         // Devolver resultado para o cliente
-                        Message messageOut = new Message(2, result);
+                        Message messageOut = new Message(2, result, messageIn.numMensagem);
                         messageOut.serialize(out);
                         out.flush();
                     } catch (JobFunctionException e) {
@@ -112,8 +112,6 @@ public class Server
             Socket socket = serverSocket.accept();
             Thread worker = new Thread(new ServerWorker(socket, utilizadores));
             worker.start();
-            /* int i = Thread.activeCount();
-            System.out.println("Há " + (i-1) + " threads"); */
         }
     }
 }

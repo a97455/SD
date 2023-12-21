@@ -5,20 +5,22 @@ class Message
     public int type;
     public int size;
     public byte[] content;
+    public int numMensagem;
 
     // Constructor without size argument
-    public Message(int type, byte[] content) {
+    public Message(int type, byte[] content,int numMensagem) {
         this.type = type;
         this.size = content.length; // Use content length as size
         this.content = content;
+        this.numMensagem=numMensagem;
     }
 
     // Constructor with size argument
-    public Message(int type,int size, byte[] content)
-    {
+    public Message(int type,int size, byte[] content,int numMensagem){
         this.type = type;
         this.size = size;
         this.content = content;
+        this.numMensagem=numMensagem;
     }
 
     public void serialize(DataOutputStream out) throws IOException
@@ -27,17 +29,19 @@ class Message
         out.writeInt(this.size);
         out.writeInt(this.content.length);
         out.write(this.content);
+        out.writeInt(this.numMensagem);
     }
 
     public static Message deserialize(DataInputStream in) throws IOException
     {
         int type = in.readInt();
-        int size = in.readInt();
+        int size = in.readInt(); //tamanho arbitrario mensagem (enunciado)
         int contentLength = in.readInt();
         byte[] content = new byte[contentLength];
         in.readFully(content);
+        int numMensagem = in.readInt();
 
-        return (new Message(type,size,content));
+        return (new Message(type,size,content,numMensagem));
     }
 
 }

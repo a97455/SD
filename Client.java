@@ -3,7 +3,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Scanner;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -30,7 +29,7 @@ public class Client {
 
     public void menu1(Scanner scanner,DataInputStream in, DataOutputStream out) // Autenticação, saída (após registo)
     {
-        System.out.println("1-Registo");
+        System.out.println("\n1-Registo");
         System.out.println("2-Autenticação");
         System.out.println("0-Sair");
         System.out.print("Digite uma das opções: ");
@@ -58,7 +57,7 @@ public class Client {
     public void menu2(Scanner scanner,DataInputStream in, DataOutputStream out) // Enviar tarefa, saída (após autenticação)
     {
         lock.lock();
-        System.out.println("1-Enviar tarefa");
+        System.out.println("\n1-Enviar tarefa");
         System.out.println("0-Sair");
         System.out.print("Digite uma das opções: ");
 
@@ -106,8 +105,7 @@ public class Client {
             Message messageIn = Message.deserialize(in);
             System.out.println(new String(messageIn.content));
 
-            // Se o registo for bem sucedido
-            if (messageIn.type == 0) menu1(scanner,in ,out);
+            menu1(scanner,in ,out);
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -136,6 +134,7 @@ public class Client {
 
             // Se a autenticação for bem sucedida
             if (messageIn.type == 0) menu2(scanner,in, out);
+            else menu1(scanner,in,out);
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -182,16 +181,10 @@ public class Client {
                     System.out.println("Tarefa "+messageIn.numMensagem+" terminada com sucesso.");
                     lock.unlock();
                 }
-            }catch(IOException e){
+            }catch(IOException | InterruptedException e){
                     throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
             }
         }).start();
-
-
-
-
     }
 
     /* ------------------------------------------------------
@@ -203,10 +196,7 @@ public class Client {
             Client client=new Client();
             client.menu1(client.scanner,client.tagged.in,client.tagged.out);
             client.sair(client.socket,client.scanner);
-        } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }

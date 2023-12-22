@@ -14,15 +14,16 @@ public class Client {
     private final Demultiplexer des;
     private final ReentrantLock lock;
     private final Condition cond;
-    private int numTarefas;
+    private int numMensagem;
 
     public Client() throws IOException{
         this.socket = new Socket("localhost", 12345);
         this.scanner = new Scanner(System.in);
         this.des= new Demultiplexer(new TaggedConnection(socket));
+        this.des.start();
         this.lock=new ReentrantLock();
         this.cond=this.lock.newCondition();
-        this.numTarefas=0;
+        this.numMensagem=0;
     }
 
     /* ------------------------------------------------------
@@ -62,7 +63,6 @@ public class Client {
         System.out.println("\n1-Enviar tarefa");
         System.out.println("0-Sair");
         System.out.print("Digite uma das opções: ");
-        lock.unlock();
 
         int option = this.scanner.nextInt();
         this.scanner.nextLine();
@@ -100,13 +100,13 @@ public class Client {
 
             // Enviar mensagem para registo no servidor
             String s = username + "," + password;
-            Message messageOut = new Message(0, s.getBytes());
-            
-            this.des.send(new TaggedConnection.Frame(Thread.currentThread().threadId(), messageOut));
-            System.out.println(messageOut.numMensagem);
+            Message messageOut = new Message(0, s.getBytes(),numMensagem);
+
+            long numThread = Thread.currentThread().threadId();
+            this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
             // Receber resultado do registo
-            Message messageIn = this.des.receive(messageOut.numMensagem);
+            Message messageIn = this.des.receive(numThread);
 
             System.out.println(new String(messageIn.content));
 
@@ -129,12 +129,13 @@ public class Client {
 
             // Enviar mensagem para autenticação no servidor
             String s = username + "," + password;
-            Message messageOut = new Message(1, s.getBytes());
+            Message messageOut = new Message(1, s.getBytes(),numMensagem);
 
-            this.des.send(new TaggedConnection.Frame(Thread.currentThread().threadId(), messageOut));
+            long numThread = Thread.currentThread().threadId();
+            this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
             // Receber resultado da autenticação
-            Message messageIn = this.des.receive(messageOut.numMensagem);
+            Message messageIn = this.des.receive(numThread);
             System.out.println(new String(messageIn.content));
 
             // Se a autenticação for bem sucedida
@@ -153,8 +154,7 @@ public class Client {
         this.socket.close();
     }
 
-    public void tarefa(){
-        lock.lock();
+    public void tarefa() {
         new Thread(() -> {
             try {
                 lock.lock();
@@ -168,38 +168,40 @@ public class Client {
 
                 // Enviar mensagem com a tarefa como conteúdo
                 byte[] content = Files.readAllBytes(path1);
-                Message messageOut = new Message(2, size, content,++numTarefas);
+                Message messageOut = new Message(2, size, content, ++numMensagem);
 
-                System.out.println("A mensagem "+numTarefas+" foi enviada");
+                System.out.println("A Tarefa " + numMensagem + " foi enviada");
+
                 this.cond.signal();
                 lock.unlock();
 
-                this.des.send(new TaggedConnection.Frame(Thread.currentThread().threadId(), messageOut));
+                long numThread = Thread.currentThread().threadId();
+                this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
-                Message messageIn =this.des.receive(messageOut.numMensagem);
+                Message messageIn = this.des.receive(numThread);
 
-                System.out.println("aaaa");
-                // Se a execução devolver o resutlado, escrevê-lo num ficheiro
-                if (messageIn.type == 2) {
-                    System.out.println("bbbb");
+                // Se a execução devolver o resultado, escrevê-lo num ficheiro
+                    if (messageIn.type == 2) {
                     lock.lock();
                     System.out.println("Caminho para o ficheiro com o resultado: ");
                     Path path2 = Paths.get(this.scanner.nextLine());
 
                     Files.write(path2, messageIn.content);
-                    System.out.println("Tarefa "+messageIn.numMensagem+" terminada com sucesso.");
+                    System.out.println("Tarefa " + messageIn.numMensagem + " terminada com sucesso.");
                     lock.unlock();
                 }
-            }catch(IOException | InterruptedException e){
-                    throw new RuntimeException(e);
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }).start();
+
         try {
             this.cond.await();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
         }
-        lock.unlock();
     }
 
     /* ------------------------------------------------------

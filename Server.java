@@ -23,7 +23,8 @@ class ServerWorker implements Runnable
 
         try {
             while (true) {
-                Message messageIn = this.tagged.receive().mensagem;
+                TaggedConnection.Frame frameIn = this.tagged.receive();
+                Message messageIn = frameIn.mensagem;
                 // REGISTO DE UM NOVO CLIENTE
                 if (messageIn.type == 0) {
                     String s = new String(messageIn.content);
@@ -43,9 +44,8 @@ class ServerWorker implements Runnable
                         resposta = "Novo cliente registado com sucesso!";
                     }
 
-                    Message messageOut = new Message(type, resposta.getBytes());
-                    System.out.println(messageOut.numMensagem);
-                    this.tagged.send(new TaggedConnection.Frame(messageOut.numMensagem,messageOut));
+                    Message messageOut = new Message(type, resposta.getBytes(),messageIn.numMensagem);
+                    this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
                 }
 
                 // AUTENTICAÇÃO DE UM CLIENTE
@@ -67,8 +67,8 @@ class ServerWorker implements Runnable
                         resposta = "Não é possível fazer a autenticação.";
                     }
 
-                    Message messageOut = new Message(type, resposta.getBytes());
-                    this.tagged.send(new TaggedConnection.Frame(messageOut.numMensagem,messageOut));
+                    Message messageOut = new Message(type, resposta.getBytes(),messageIn.numMensagem);
+                    this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
                 }
                 // TAREFA PARA EXECUÇÃO
                 else if (messageIn.type == 2) {
@@ -76,8 +76,8 @@ class ServerWorker implements Runnable
                         byte[] result = JobFunction.execute(messageIn.content);
 
                         // Devolver resultado para o cliente
-                        Message messageOut = new Message(2, result);
-                        this.tagged.send(new TaggedConnection.Frame(messageOut.numMensagem,messageOut));
+                        Message messageOut = new Message(2, result,messageIn.numMensagem);
+                        this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
                     } catch (JobFunctionException e) {
                         throw new RuntimeException(e);
                     }

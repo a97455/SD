@@ -160,25 +160,30 @@ public class Client {
 
                 // Enviar mensagem com a tarefa como conteúdo
                 byte[] content = Files.readAllBytes(path1);
-                Message messageOut = new Message(2, size, content, ++numMensagem);
+                int numTarefa = ++numMensagem;
+                Message messageOut = new Message(2, size, content, numTarefa);
 
-                System.out.println("A Tarefa " + numMensagem + " foi enviada");
+                System.out.println("A Tarefa " + numTarefa + " foi enviada");
 
                 this.cond.signal();
                 lock.unlock();
 
-                long numThread = Thread.currentThread().threadId();
-                this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+                try {
+                    long numThread = Thread.currentThread().threadId();
+                    this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
-                Message messageIn = this.des.receive(numThread);
+                    Message messageIn = this.des.receive(numThread);
 
-                // Se a execução devolver o resultado, escrevê-lo num ficheiro
-                if (messageIn.type == 2) {
-                    Files.write(path2, messageIn.content);
+                    // Se a execução devolver o resultado, escrevê-lo num ficheiro
+                    if (messageIn.type == 2) {
+                        Files.write(path2, messageIn.content);
 
-                    lock.lock();
-                    System.out.println("\nTarefa " + messageIn.numMensagem + " terminada com sucesso.");
-                    lock.unlock();
+                        lock.lock();
+                        System.out.println("\nTarefa " + numTarefa + " terminada com sucesso.");
+                        lock.unlock();
+                    }
+                }catch (IOException e){
+                    System.out.println("\nTarefa " + numTarefa + " não terminada");
                 }
             } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);

@@ -12,6 +12,5 @@ Okkkkk Lets goooo
 (número de tarefas pendentes) a implementar no cliente - **LARA**
 ---
 - Cliente Multi-threading - **EMA/HENRIQUE**
-  - O cliente permita submeter novos pedidos de consulta e de execução de tarefas, sem ter recebido as respostas dos anteriores
-  - O cliente deve continuar a ter acesso às respostas e saber a que pedido se referem
+  - FEITO
 ---

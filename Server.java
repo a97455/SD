@@ -21,8 +21,8 @@ class ServerWorker implements Runnable
     @Override
     public void run() {
 
-        try {
-            while (true) {
+        while (true){
+            try{
                 TaggedConnection.Frame frameIn = this.tagged.receive();
                 Message messageIn = frameIn.mensagem;
                 // REGISTO DE UM NOVO CLIENTE
@@ -82,9 +82,9 @@ class ServerWorker implements Runnable
                         throw new RuntimeException(e);
                     }
                 }
+            }catch (IOException e){
+                break;
             }
-        }catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 }

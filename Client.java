@@ -30,7 +30,7 @@ public class Client {
                             MENUS
     ------------------------------------------------------ */
 
-    public void menu1() // Autenticação, saída (após registo)
+    public void menu1() throws IOException, InterruptedException // Autenticação, saída (após registo)
     {
         System.out.println("\n1-Registo");
         System.out.println("2-Autenticação");
@@ -43,6 +43,7 @@ public class Client {
         switch (option)
         {
             case 0:
+                sair();
                 break;
             case 1:
                 registo();
@@ -57,7 +58,7 @@ public class Client {
         }
     }
 
-    public void menu2() // Enviar tarefa, saída (após autenticação)
+    public void menu2() throws IOException, InterruptedException // Enviar tarefa, saída (após autenticação)
     {
         lock.lock();
         System.out.println("\n1-Enviar tarefa");
@@ -71,6 +72,7 @@ public class Client {
         {
             case 0:
                 lock.unlock();
+                sair();
                 break;
             case 1:
                 tarefa();
@@ -89,62 +91,49 @@ public class Client {
                             AÇÕES
     ------------------------------------------------------ */
 
-    public void registo()
-    {
-        try{
-            // Ler input do utilizador
-            System.out.println("Nome de utilizador: ");
-            String username = this.scanner.nextLine();
-            System.out.println("Palavra-passe: ");
-            String password = this.scanner.nextLine();
+    public void registo() throws IOException, InterruptedException {
+        // Ler input do utilizador
+        System.out.println("Nome de utilizador: ");
+        String username = this.scanner.nextLine();
+        System.out.println("Palavra-passe: ");
+        String password = this.scanner.nextLine();
 
-            // Enviar mensagem para registo no servidor
-            String s = username + "," + password;
-            Message messageOut = new Message(0, s.getBytes(),numMensagem);
+        // Enviar mensagem para registo no servidor
+        String s = username + "," + password;
+        Message messageOut = new Message(0, s.getBytes(),numMensagem);
 
-            long numThread = Thread.currentThread().threadId();
-            this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+        long numThread = Thread.currentThread().threadId();
+        this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
-            // Receber resultado do registo
-            Message messageIn = this.des.receive(numThread);
+        // Receber resultado do registo
+        Message messageIn = this.des.receive(numThread);
 
-            System.out.println(new String(messageIn.content));
+        System.out.println(new String(messageIn.content));
 
-            menu1();
-        }
-        catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        menu1();
     }
 
-    public void autenticacao()
-    {
-        try
-        {
-            // Ler input do utilizador
-            System.out.println("Nome de utilizador: ");
-            String username = this.scanner.nextLine();
-            System.out.println("Palavra-passe: ");
-            String password = this.scanner.nextLine();
+    public void autenticacao() throws IOException, InterruptedException {
+        // Ler input do utilizador
+        System.out.println("Nome de utilizador: ");
+        String username = this.scanner.nextLine();
+        System.out.println("Palavra-passe: ");
+        String password = this.scanner.nextLine();
 
-            // Enviar mensagem para autenticação no servidor
-            String s = username + "," + password;
-            Message messageOut = new Message(1, s.getBytes(),numMensagem);
+        // Enviar mensagem para autenticação no servidor
+        String s = username + "," + password;
+        Message messageOut = new Message(1, s.getBytes(), numMensagem);
 
-            long numThread = Thread.currentThread().threadId();
-            this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+        long numThread = Thread.currentThread().threadId();
+        this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
-            // Receber resultado da autenticação
-            Message messageIn = this.des.receive(numThread);
-            System.out.println(new String(messageIn.content));
+        // Receber resultado da autenticação
+        Message messageIn = this.des.receive(numThread);
+        System.out.println(new String(messageIn.content));
 
-            // Se a autenticação for bem sucedida
-            if (messageIn.type == 0) menu2();
-            else menu1();
-        }
-        catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        // Se a autenticação for bem sucedida
+        if (messageIn.type == 0) menu2();
+        else menu1();
     }
 
     public void sair() throws IOException {
@@ -154,13 +143,16 @@ public class Client {
         this.socket.close();
     }
 
-    public void tarefa() {
+    public void tarefa() throws InterruptedException {
         new Thread(() -> {
             try {
                 lock.lock();
                 // Ler input do utilizador
                 System.out.println("Caminho para o ficheiro a executar: ");
                 Path path1 = Paths.get(this.scanner.nextLine());
+
+                System.out.println("Caminho para o ficheiro com o resultado: ");
+                Path path2 = Paths.get(this.scanner.nextLine());
 
                 System.out.println("Tamanho da Tarefa ");
                 int size = this.scanner.nextInt();
@@ -181,13 +173,11 @@ public class Client {
                 Message messageIn = this.des.receive(numThread);
 
                 // Se a execução devolver o resultado, escrevê-lo num ficheiro
-                    if (messageIn.type == 2) {
-                    lock.lock();
-                    System.out.println("Caminho para o ficheiro com o resultado: ");
-                    Path path2 = Paths.get(this.scanner.nextLine());
-
+                if (messageIn.type == 2) {
                     Files.write(path2, messageIn.content);
-                    System.out.println("Tarefa " + messageIn.numMensagem + " terminada com sucesso.");
+
+                    lock.lock();
+                    System.out.println("\nTarefa " + messageIn.numMensagem + " terminada com sucesso.");
                     lock.unlock();
                 }
             } catch (IOException | InterruptedException e) {
@@ -195,13 +185,8 @@ public class Client {
             }
         }).start();
 
-        try {
-            this.cond.await();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } finally {
-            lock.unlock();
-        }
+        this.cond.await();
+        lock.unlock();
     }
 
     /* ------------------------------------------------------
@@ -212,8 +197,7 @@ public class Client {
         try {
             Client client=new Client();
             client.menu1();
-            client.sair();
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

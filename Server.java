@@ -9,29 +9,24 @@ import java.util.Map;
 
 class ServerWorker implements Runnable
 {
-    private final Socket socket;
     private final Map<String, String> utilizadores;
     private final int capacity = 1024;
+    private final TaggedConnection tagged;
 
-    public ServerWorker(Socket socket, Map<String,String> utilizadores)
-    {
-        this.socket = socket;
+    public ServerWorker(Socket socket, Map<String,String> utilizadores) throws IOException {
         this.utilizadores = utilizadores;
+        this.tagged= new TaggedConnection(socket);
     }
 
     @Override
     public void run() {
 
         try {
-            DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-            DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-
             while (true) {
-                Message messageIn = Message.deserialize(in);
+                Message messageIn = this.tagged.receive().mensagem;
                 // REGISTO DE UM NOVO CLIENTE
                 if (messageIn.type == 0) {
                     String s = new String(messageIn.content);
-                    System.out.println(s);
                     String[] parts = s.split(",");
                     String username = parts[0];
                     String password = parts[1];
@@ -46,12 +41,11 @@ class ServerWorker implements Runnable
                         utilizadores.put(username, password);
                         type = 0;
                         resposta = "Novo cliente registado com sucesso!";
-                        // utilizadores.forEach((key, value) -> System.out.println(key + " : " + value));
                     }
 
-                    Message messageOut = new Message(type, resposta.getBytes(), messageIn.numMensagem);
-                    messageOut.serialize(out);
-                    out.flush();
+                    Message messageOut = new Message(type, resposta.getBytes());
+                    System.out.println(messageOut.numMensagem);
+                    this.tagged.send(new TaggedConnection.Frame(messageOut.numMensagem,messageOut));
                 }
 
                 // AUTENTICAÇÃO DE UM CLIENTE
@@ -73,24 +67,19 @@ class ServerWorker implements Runnable
                         resposta = "Não é possível fazer a autenticação.";
                     }
 
-                    Message messageOut = new Message(type, resposta.getBytes(),messageIn.numMensagem);
-                    messageOut.serialize(out);
-                    out.flush();
-
+                    Message messageOut = new Message(type, resposta.getBytes());
+                    this.tagged.send(new TaggedConnection.Frame(messageOut.numMensagem,messageOut));
                 }
                 // TAREFA PARA EXECUÇÃO
                 else if (messageIn.type == 2) {
                     try {
                         byte[] result = JobFunction.execute(messageIn.content);
-                        // System.err.println("Tarefa executada com successo. Resultado " + result.length + " bytes");
 
                         // Devolver resultado para o cliente
-                        Message messageOut = new Message(2, result, messageIn.numMensagem);
-                        messageOut.serialize(out);
-                        out.flush();
+                        Message messageOut = new Message(2, result);
+                        this.tagged.send(new TaggedConnection.Frame(messageOut.numMensagem,messageOut));
                     } catch (JobFunctionException e) {
-                        // Mensagem de erro
-                        // System.err.println("Tarefa sem sucesso. Código=" + e.getCode() + " Mensagem=" + e.getMessage());
+                        throw new RuntimeException(e);
                     }
                 }
             }

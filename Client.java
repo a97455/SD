@@ -9,22 +9,20 @@ import java.util.concurrent.locks.ReentrantLock;
 
 
 public class Client {
-    Socket socket;
-    Scanner scanner;
-    TaggedConnection tagged;
-    Demultiplexer des;
-    ReentrantLock lock;
+    private final Socket socket;
+    private final Scanner scanner;
+    private final Demultiplexer des;
+    private final ReentrantLock lock;
     private final Condition cond;
-    private int numMensagem;
+    private int numTarefas;
 
     public Client() throws IOException{
         this.socket = new Socket("localhost", 12345);
         this.scanner = new Scanner(System.in);
-        this.tagged = new TaggedConnection(this.socket);
-        this.des= new Demultiplexer(tagged);
+        this.des= new Demultiplexer(new TaggedConnection(socket));
         this.lock=new ReentrantLock();
         this.cond=this.lock.newCondition();
-        this.numMensagem=0;
+        this.numTarefas=0;
     }
 
     /* ------------------------------------------------------
@@ -102,15 +100,13 @@ public class Client {
 
             // Enviar mensagem para registo no servidor
             String s = username + "," + password;
-            Message messageOut = new Message(0, s.getBytes(),++numMensagem);
+            Message messageOut = new Message(0, s.getBytes());
             
-            long numThread = Thread.currentThread().threadId();
-            System.out.println(numThread);
-            this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+            this.des.send(new TaggedConnection.Frame(Thread.currentThread().threadId(), messageOut));
+            System.out.println(messageOut.numMensagem);
 
             // Receber resultado do registo
-            Message messageIn = this.des.receive(numThread);
-            System.out.println("afaagf");
+            Message messageIn = this.des.receive(messageOut.numMensagem);
 
             System.out.println(new String(messageIn.content));
 
@@ -133,13 +129,12 @@ public class Client {
 
             // Enviar mensagem para autenticação no servidor
             String s = username + "," + password;
-            Message messageOut = new Message(1, s.getBytes(),++numMensagem);
-            
-            long numThread = Thread.currentThread().threadId();
-            this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+            Message messageOut = new Message(1, s.getBytes());
+
+            this.des.send(new TaggedConnection.Frame(Thread.currentThread().threadId(), messageOut));
 
             // Receber resultado da autenticação
-            Message messageIn = this.des.receive(numThread);
+            Message messageIn = this.des.receive(messageOut.numMensagem);
             System.out.println(new String(messageIn.content));
 
             // Se a autenticação for bem sucedida
@@ -163,7 +158,6 @@ public class Client {
         new Thread(() -> {
             try {
                 lock.lock();
-                long numThread = Thread.currentThread().threadId();
                 // Ler input do utilizador
                 System.out.println("Caminho para o ficheiro a executar: ");
                 Path path1 = Paths.get(this.scanner.nextLine());
@@ -174,15 +168,15 @@ public class Client {
 
                 // Enviar mensagem com a tarefa como conteúdo
                 byte[] content = Files.readAllBytes(path1);
-                Message messageOut = new Message(2, size, content,++numMensagem);
+                Message messageOut = new Message(2, size, content,++numTarefas);
 
-                System.out.println("A mensagem "+numMensagem+" foi enviada");
+                System.out.println("A mensagem "+numTarefas+" foi enviada");
                 this.cond.signal();
                 lock.unlock();
 
-                this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+                this.des.send(new TaggedConnection.Frame(Thread.currentThread().threadId(), messageOut));
 
-                Message messageIn =this.des.receive(numThread);
+                Message messageIn =this.des.receive(messageOut.numMensagem);
 
                 System.out.println("aaaa");
                 // Se a execução devolver o resutlado, escrevê-lo num ficheiro

@@ -8,14 +8,13 @@ public class Message
     public int numMensagem;
 
     // Constructor without size argument
-    public Message(int type, byte[] content,int numMensagem) {
+    public Message(int type, byte[] content) {
         this.type = type;
         this.size = content.length; // Use content length as size
         this.content = content;
-        this.numMensagem=numMensagem;
     }
 
-    // Constructor with size argument
+    // Constructor with size argument (Tarefas)
     public Message(int type,int size, byte[] content,int numMensagem){
         this.type = type;
         this.size = size;

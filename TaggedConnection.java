@@ -44,7 +44,7 @@ public class TaggedConnection implements AutoCloseable {
     public Frame receive() throws IOException {
         readlock.readLock().lock();
 
-        int tag = this.in.readInt();
+        long tag = this.in.readLong();
         Message mensagem=Message.deserialize(in);
 
         readlock.readLock().unlock();

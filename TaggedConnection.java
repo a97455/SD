@@ -3,17 +3,17 @@ import java.net.Socket;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class TaggedConnection implements AutoCloseable {
-    public Socket socket;
-    public DataOutputStream out;
-    public DataInputStream in;
-    public ReentrantReadWriteLock readlock;
-    public ReentrantReadWriteLock writeLock;
+    private final Socket socket;
+    private final DataOutputStream out;
+    private final DataInputStream in;
+    private final ReentrantReadWriteLock readlock;
+    private final ReentrantReadWriteLock writeLock;
 
     public static class Frame {
-        public final int tag;
+        public final long tag;
         public Message mensagem;
 
-        public Frame(int tag, Message mensagem) {
+        public Frame(long tag, Message mensagem) {
             this.tag = tag;
             this.mensagem = mensagem;
         }
@@ -31,10 +31,10 @@ public class TaggedConnection implements AutoCloseable {
         this.send(frame.tag,frame.mensagem);
     }
 
-    public void send(int tag, Message mensagem) throws IOException {
+    public void send(long tag, Message mensagem) throws IOException {
         writeLock.writeLock().lock();
 
-        this.out.write(tag);
+        this.out.writeLong(tag);
         mensagem.serialize(out);
         this.out.flush();
 

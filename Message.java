@@ -1,9 +1,9 @@
 import java.io.*;
 
-class Message
+public class Message
 {
     public int type;
-    public int size;
+    public int size; //tamanho arbitrario mensagem (fornecida pelo cliente)
     public byte[] content;
     public int numMensagem;
 
@@ -35,7 +35,7 @@ class Message
     public static Message deserialize(DataInputStream in) throws IOException
     {
         int type = in.readInt();
-        int size = in.readInt(); //tamanho arbitrario mensagem (enunciado)
+        int size = in.readInt();
         int contentLength = in.readInt();
         byte[] content = new byte[contentLength];
         in.readFully(content);

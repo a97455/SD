@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 
@@ -13,13 +14,16 @@ public class Client {
     TaggedConnection tagged;
     Demultiplexer des;
     ReentrantLock lock;
+    private final Condition cond;
     private int numMensagem;
+
     public Client() throws IOException{
         this.socket = new Socket("localhost", 12345);
         this.scanner = new Scanner(System.in);
-        this.tagged = new TaggedConnection(socket);
+        this.tagged = new TaggedConnection(this.socket);
         this.des= new Demultiplexer(tagged);
         this.lock=new ReentrantLock();
+        this.cond=this.lock.newCondition();
         this.numMensagem=0;
     }
 
@@ -27,25 +31,25 @@ public class Client {
                             MENUS
     ------------------------------------------------------ */
 
-    public void menu1(Scanner scanner,DataInputStream in, DataOutputStream out) // Autenticação, saída (após registo)
+    public void menu1() // Autenticação, saída (após registo)
     {
         System.out.println("\n1-Registo");
         System.out.println("2-Autenticação");
         System.out.println("0-Sair");
         System.out.print("Digite uma das opções: ");
 
-        int option = scanner.nextInt();
-        scanner.nextLine();
+        int option = this.scanner.nextInt();
+        this.scanner.nextLine();
 
         switch (option)
         {
             case 0:
                 break;
             case 1:
-                registo(scanner,in,out);
+                registo();
                 break;
             case 2:
-                autenticacao(scanner, in, out);
+                autenticacao();
                 break;
 
             default:
@@ -54,15 +58,16 @@ public class Client {
         }
     }
 
-    public void menu2(Scanner scanner,DataInputStream in, DataOutputStream out) // Enviar tarefa, saída (após autenticação)
+    public void menu2() // Enviar tarefa, saída (após autenticação)
     {
         lock.lock();
         System.out.println("\n1-Enviar tarefa");
         System.out.println("0-Sair");
         System.out.print("Digite uma das opções: ");
+        lock.unlock();
 
-        int option = scanner.nextInt();
-        scanner.nextLine();
+        int option = this.scanner.nextInt();
+        this.scanner.nextLine();
 
         switch (option)
         {
@@ -70,14 +75,14 @@ public class Client {
                 lock.unlock();
                 break;
             case 1:
-                tarefa(scanner, in, out);
-                menu2(scanner,in,out);
+                tarefa();
+                menu2();
                 break;
 
             default:
                 System.out.println("Opção inválida.");
                 lock.unlock();
-                menu2(scanner,in,out);
+                menu2();
                 break;
         }
     }
@@ -86,96 +91,106 @@ public class Client {
                             AÇÕES
     ------------------------------------------------------ */
 
-    public void registo(Scanner scanner,DataInputStream in,DataOutputStream out)
+    public void registo()
     {
         try{
             // Ler input do utilizador
             System.out.println("Nome de utilizador: ");
-            String username = scanner.nextLine();
+            String username = this.scanner.nextLine();
             System.out.println("Palavra-passe: ");
-            String password = scanner.nextLine();
+            String password = this.scanner.nextLine();
 
             // Enviar mensagem para registo no servidor
             String s = username + "," + password;
             Message messageOut = new Message(0, s.getBytes(),++numMensagem);
-            messageOut.serialize(out);
-            out.flush();
+            
+            long numThread = Thread.currentThread().threadId();
+            System.out.println(numThread);
+            this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
             // Receber resultado do registo
-            Message messageIn = Message.deserialize(in);
+            Message messageIn = this.des.receive(numThread);
+            System.out.println("afaagf");
+
             System.out.println(new String(messageIn.content));
 
-            menu1(scanner,in ,out);
+            menu1();
         }
-        catch (IOException e) {
+        catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void autenticacao(Scanner scanner, DataInputStream in, DataOutputStream out)
+    public void autenticacao()
     {
         try
         {
             // Ler input do utilizador
             System.out.println("Nome de utilizador: ");
-            String username = scanner.nextLine();
+            String username = this.scanner.nextLine();
             System.out.println("Palavra-passe: ");
-            String password = scanner.nextLine();
+            String password = this.scanner.nextLine();
 
             // Enviar mensagem para autenticação no servidor
             String s = username + "," + password;
             Message messageOut = new Message(1, s.getBytes(),++numMensagem);
-            messageOut.serialize(out);
-            out.flush();
+            
+            long numThread = Thread.currentThread().threadId();
+            this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
             // Receber resultado da autenticação
-            Message messageIn = Message.deserialize(in);
+            Message messageIn = this.des.receive(numThread);
             System.out.println(new String(messageIn.content));
 
             // Se a autenticação for bem sucedida
-            if (messageIn.type == 0) menu2(scanner,in, out);
-            else menu1(scanner,in,out);
+            if (messageIn.type == 0) menu2();
+            else menu1();
         }
-        catch (IOException e) {
+        catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void sair(Socket socket,Scanner scanner) throws IOException {
-        scanner.close();
-        socket.shutdownInput();
-        socket.shutdownOutput();
-        socket.close();
+    public void sair() throws IOException {
+        this.scanner.close();
+        this.socket.shutdownInput();
+        this.socket.shutdownOutput();
+        this.socket.close();
     }
 
-    public void tarefa(Scanner scanner, DataInputStream in, DataOutputStream out){
+    public void tarefa(){
+        lock.lock();
         new Thread(() -> {
             try {
-                int numThread =Thread.activeCount();
+                lock.lock();
+                long numThread = Thread.currentThread().threadId();
                 // Ler input do utilizador
                 System.out.println("Caminho para o ficheiro a executar: ");
-                Path path1 = Paths.get(scanner.nextLine());
+                Path path1 = Paths.get(this.scanner.nextLine());
 
                 System.out.println("Tamanho da Tarefa ");
-                int size = scanner.nextInt();
-                scanner.nextLine();
+                int size = this.scanner.nextInt();
+                this.scanner.nextLine();
 
                 // Enviar mensagem com a tarefa como conteúdo
                 byte[] content = Files.readAllBytes(path1);
                 Message messageOut = new Message(2, size, content,++numMensagem);
 
                 System.out.println("A mensagem "+numMensagem+" foi enviada");
+                this.cond.signal();
                 lock.unlock();
 
                 this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
                 Message messageIn =this.des.receive(numThread);
 
+                System.out.println("aaaa");
                 // Se a execução devolver o resutlado, escrevê-lo num ficheiro
                 if (messageIn.type == 2) {
+                    System.out.println("bbbb");
                     lock.lock();
                     System.out.println("Caminho para o ficheiro com o resultado: ");
-                    Path path2 = Paths.get(scanner.nextLine());
+                    Path path2 = Paths.get(this.scanner.nextLine());
 
                     Files.write(path2, messageIn.content);
                     System.out.println("Tarefa "+messageIn.numMensagem+" terminada com sucesso.");
@@ -185,6 +200,12 @@ public class Client {
                     throw new RuntimeException(e);
             }
         }).start();
+        try {
+            this.cond.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        lock.unlock();
     }
 
     /* ------------------------------------------------------
@@ -194,8 +215,8 @@ public class Client {
     public static void main(String[] args) {
         try {
             Client client=new Client();
-            client.menu1(client.scanner,client.tagged.in,client.tagged.out);
-            client.sair(client.socket,client.scanner);
+            client.menu1();
+            client.sair();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

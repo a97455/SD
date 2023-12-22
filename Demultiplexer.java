@@ -6,10 +6,10 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Demultiplexer implements AutoCloseable{
-    public TaggedConnection taggedConnection;
-    public Lock lock = new ReentrantLock();
-    public HashMap<Integer, Entry> buf = new HashMap<>();
-    public IOException exception = null;
+    private final TaggedConnection taggedConnection;
+    private final Lock lock = new ReentrantLock();
+    private final HashMap<Long, Entry> buf = new HashMap<>();
+    private IOException exception = null;
 
     private class Entry{
         int waiters =0;
@@ -17,7 +17,7 @@ public class Demultiplexer implements AutoCloseable{
         final ArrayDeque<Message> queue= new ArrayDeque<>();
     }
 
-    private Entry get(int tag){
+    private Entry get(long tag){
         Entry e = buf.get(tag);
         if (e==null){
             e = new Entry();
@@ -60,11 +60,11 @@ public class Demultiplexer implements AutoCloseable{
         this.taggedConnection.send(frame);
     }
 
-    public void send(int tag, Message mensagem) throws IOException {
+    public void send(long tag, Message mensagem) throws IOException {
         this.taggedConnection.send(tag,mensagem);
     }
 
-    public Message receive(int tag) throws IOException, InterruptedException {
+    public Message receive(long tag) throws IOException, InterruptedException {
         lock.lock();
         try{
             Entry e = get(tag);

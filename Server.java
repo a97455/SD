@@ -9,9 +9,9 @@ import java.util.Map;
 
 class ServerWorker implements Runnable
 {
-    private Socket socket;
-    private Map<String, String> utilizadores;
-    private int capacity = 1024;
+    private final Socket socket;
+    private final Map<String, String> utilizadores;
+    private final int capacity = 1024;
 
     public ServerWorker(Socket socket, Map<String,String> utilizadores)
     {
@@ -31,11 +31,12 @@ class ServerWorker implements Runnable
                 // REGISTO DE UM NOVO CLIENTE
                 if (messageIn.type == 0) {
                     String s = new String(messageIn.content);
+                    System.out.println(s);
                     String[] parts = s.split(",");
                     String username = parts[0];
                     String password = parts[1];
 
-                    String resposta = null;
+                    String resposta;
                     int type;
 
                     if (utilizadores.containsKey(username)) {
@@ -61,7 +62,7 @@ class ServerWorker implements Runnable
                     String username = parts[0];
                     String password = parts[1];
 
-                    String resposta = null;
+                    String resposta;
                     int type;
 
                     if (utilizadores.containsKey(username) && utilizadores.get(username).equals(password)) {

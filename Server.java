@@ -7,8 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-class ServerWorker implements Runnable
-{
+class ServerWorker implements Runnable {
     private final Map<String, String> utilizadores;
     private final int capacity = 1024;
     private final TaggedConnection tagged;
@@ -20,7 +19,6 @@ class ServerWorker implements Runnable
 
     @Override
     public void run() {
-
         while (true){
             try{
                 TaggedConnection.Frame frameIn = this.tagged.receive();
@@ -35,19 +33,18 @@ class ServerWorker implements Runnable
                     String resposta;
                     int type;
 
-                    if (utilizadores.containsKey(username)) {
-                        type = 1;
-                        resposta = "Não é possível fazer o registo. O nome de utilizador já existe.";
-                    } else {
+                    if (!utilizadores.containsKey(username)) {
                         utilizadores.put(username, password);
                         type = 0;
                         resposta = "Novo cliente registado com sucesso!";
+                    }else {
+                        type = 1;
+                        resposta = "Não é possível fazer o registo. O nome de utilizador já existe.";
                     }
 
-                    Message messageOut = new Message(type, resposta.getBytes(),messageIn.numMensagem);
-                    this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
+                    Message messageOut = new Message(type, resposta.getBytes(), messageIn.numMensagem);
+                    this.tagged.send(new TaggedConnection.Frame(frameIn.tag, messageOut));
                 }
-
                 // AUTENTICAÇÃO DE UM CLIENTE
                 else if (messageIn.type == 1) {
                     String s = new String(messageIn.content);
@@ -76,10 +73,14 @@ class ServerWorker implements Runnable
                         byte[] result = JobFunction.execute(messageIn.content);
 
                         // Devolver resultado para o cliente
-                        Message messageOut = new Message(2, result,messageIn.numMensagem);
+                        Message messageOut = new Message(0, result,messageIn.numMensagem);
                         this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
                     } catch (JobFunctionException e) {
-                        throw new RuntimeException(e);
+                        String resposta =  "Servidor não consegui realizar a tarefa"+messageIn.numMensagem;
+
+                        // Devolver resultado para o cliente
+                        Message messageOut = new Message(1, resposta.getBytes(),messageIn.numMensagem);
+                        this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
                     }
                 }
             }catch (IOException e){
@@ -90,15 +91,12 @@ class ServerWorker implements Runnable
 }
 
 
-public class Server
-{
-    public static void main(String[] args) throws IOException
-    {
+public class Server {
+    public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(12345);
         Map<String, String> utilizadores = new HashMap<>();
 
-        while (true)
-        {
+        while (true) {
             Socket socket = serverSocket.accept();
             Thread worker = new Thread(new ServerWorker(socket, utilizadores));
             worker.start();

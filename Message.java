@@ -1,7 +1,6 @@
 import java.io.*;
 
-public class Message
-{
+public class Message {
     public int type;
     public int size; //tamanho arbitrario mensagem (fornecida pelo cliente)
     public byte[] content;
@@ -23,8 +22,7 @@ public class Message
         this.numMensagem=numMensagem;
     }
 
-    public void serialize(DataOutputStream out) throws IOException
-    {
+    public void serialize(DataOutputStream out) throws IOException {
         out.writeInt(this.type);
         out.writeInt(this.size);
         out.writeInt(this.content.length);
@@ -32,8 +30,7 @@ public class Message
         out.writeInt(this.numMensagem);
     }
 
-    public static Message deserialize(DataInputStream in) throws IOException
-    {
+    public static Message deserialize(DataInputStream in) throws IOException {
         int type = in.readInt();
         int size = in.readInt();
         int contentLength = in.readInt();
@@ -43,5 +40,4 @@ public class Message
 
         return (new Message(type,size,content,numMensagem));
     }
-
 }

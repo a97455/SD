@@ -30,8 +30,7 @@ public class Client {
                             MENUS
     ------------------------------------------------------ */
 
-    public void menu1() throws IOException, InterruptedException // Autenticação, saída (após registo)
-    {
+    public void menu1() throws IOException, InterruptedException {
         System.out.println("\n1-Registo");
         System.out.println("2-Autenticação");
         System.out.println("0-Sair");
@@ -40,8 +39,7 @@ public class Client {
         int option = this.scanner.nextInt();
         this.scanner.nextLine();
 
-        switch (option)
-        {
+        switch (option) {
             case 0:
                 sair();
                 break;
@@ -58,8 +56,7 @@ public class Client {
         }
     }
 
-    public void menu2() throws IOException, InterruptedException // Enviar tarefa, saída (após autenticação)
-    {
+    public void menu2() throws IOException, InterruptedException {
         lock.lock();
         System.out.println("\n1-Enviar tarefa");
         System.out.println("0-Sair");
@@ -68,8 +65,7 @@ public class Client {
         int option = this.scanner.nextInt();
         this.scanner.nextLine();
 
-        switch (option)
-        {
+        switch (option) {
             case 0:
                 lock.unlock();
                 sair();
@@ -175,17 +171,21 @@ public class Client {
                     Message messageIn = this.des.receive(numThread);
 
                     // Se a execução devolver o resultado, escrevê-lo num ficheiro
-                    if (messageIn.type == 2) {
+                    if (messageIn.type == 0) {
                         Files.write(path2, messageIn.content);
 
                         lock.lock();
                         System.out.println("\nTarefa " + numTarefa + " terminada com sucesso.");
                         lock.unlock();
+                    }else{
+                        lock.lock();
+                        System.out.println(new String(messageIn.content));
+                        lock.unlock();
                     }
                 }catch (IOException e){
                     System.out.println("\nTarefa " + numTarefa + " não terminada");
                 }
-            } catch (IOException | InterruptedException e) {
+            }catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }).start();

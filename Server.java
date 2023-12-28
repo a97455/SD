@@ -6,18 +6,18 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 class ServerWorker implements Runnable
 {
     private Map<String, String> utilizadores;
-
     private WaitingList waitingList;
-
-    private final int capacity = 1024;
+    private int capacity = 1024;
     private int availability = this.capacity;
-
-    private final TaggedConnection tagged;
+    private TaggedConnection tagged;
+    private ReentrantLock registoLoginLock;
+    private ReentrantLock tarefaLock;
 
 
     public ServerWorker(Socket socket, Map<String,String> utilizadores, WaitingList waitingList) throws IOException
@@ -25,6 +25,8 @@ class ServerWorker implements Runnable
         this.utilizadores = utilizadores;
         this.waitingList = waitingList;
         this.tagged= new TaggedConnection(socket);
+        this.registoLoginLock= new ReentrantLock();
+        this.tarefaLock= new ReentrantLock();
     }
 
     @Override
@@ -47,6 +49,7 @@ class ServerWorker implements Runnable
                     String resposta;
                     int type;
 
+                    registoLoginLock.lock();
                     if (!utilizadores.containsKey(username)) {
                         utilizadores.put(username, password);
                         type = 0;
@@ -56,6 +59,7 @@ class ServerWorker implements Runnable
                         type = 1;
                         resposta = "Não é possível fazer o registo. O nome de utilizador já existe.";
                     }
+                    registoLoginLock.unlock();
 
                     Message messageOut = new Message(type, resposta.getBytes(), messageIn.numMensagem);
                     this.tagged.send(new TaggedConnection.Frame(frameIn.tag, messageOut));
@@ -71,6 +75,7 @@ class ServerWorker implements Runnable
                     String resposta;
                     int type;
 
+                    registoLoginLock.lock();
                     if (utilizadores.containsKey(username) && utilizadores.get(username).equals(password)) {
                         type = 0;
                         resposta = "Autenticação realizada com sucesso.";
@@ -78,6 +83,7 @@ class ServerWorker implements Runnable
                         type = 1;
                         resposta = "Não é possível fazer a autenticação.";
                     }
+                    registoLoginLock.unlock();
 
                     Message messageOut = new Message(type, resposta.getBytes(),messageIn.numMensagem);
                     this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
@@ -85,19 +91,20 @@ class ServerWorker implements Runnable
                 // TAREFA PARA EXECUÇÃO
                 else if (messageIn.type == 2)
                 {
+                    tarefaLock.lock();
                     waitingList.addMessage(messageIn);
-
                     List<Message> selected = waitingList.selectMessages(this.availability);
+                    tarefaLock.unlock();
 
                     for (Message m: selected)
                     {
-                        Thread thread = new Thread(() -> {
+                        new Thread(() -> {
                             try {
                                 executeJob(m, frameIn);
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
-                        });
+                        }).start();
                     }
                 }
                 // CONSULTAR MEMÓRIA DISPONÍVEL

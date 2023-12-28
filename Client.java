@@ -157,6 +157,9 @@ public class Client {
                 // Enviar mensagem com a tarefa como conteúdo
                 byte[] content = Files.readAllBytes(path1);
                 int numTarefa = ++numMensagem;
+
+
+
                 Message messageOut = new Message(2, size, content, numTarefa);
 
                 System.out.println("A Tarefa " + numTarefa + " foi enviada");

@@ -93,7 +93,7 @@ class ServerWorker implements Runnable {
 
 public class Server {
     public static void main(String[] args) throws IOException {
-        ServerSocket serverSocket = new ServerSocket(12345);
+        ServerSocket serverSocket = new ServerSocket(12346);
         Map<String, String> utilizadores = new HashMap<>();
 
         while (true) {

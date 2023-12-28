@@ -4,25 +4,39 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
-class ServerWorker implements Runnable {
-    private final Map<String, String> utilizadores;
+class ServerWorker implements Runnable
+{
+    private Map<String, String> utilizadores;
+
+    private WaitingList waitingList;
+
     private final int capacity = 1024;
+    private int availability = this.capacity;
+
     private final TaggedConnection tagged;
 
-    public ServerWorker(Socket socket, Map<String,String> utilizadores) throws IOException {
+
+    public ServerWorker(Socket socket, Map<String,String> utilizadores, WaitingList waitingList) throws IOException
+    {
         this.utilizadores = utilizadores;
+        this.waitingList = waitingList;
         this.tagged= new TaggedConnection(socket);
     }
 
     @Override
-    public void run() {
-        while (true){
-            try{
+    public void run()
+    {
+        while (true)
+        {
+            try
+            {
                 TaggedConnection.Frame frameIn = this.tagged.receive();
                 Message messageIn = frameIn.mensagem;
+
                 // REGISTO DE UM NOVO CLIENTE
                 if (messageIn.type == 0) {
                     String s = new String(messageIn.content);
@@ -37,7 +51,8 @@ class ServerWorker implements Runnable {
                         utilizadores.put(username, password);
                         type = 0;
                         resposta = "Novo cliente registado com sucesso!";
-                    }else {
+                    }
+                    else {
                         type = 1;
                         resposta = "Não é possível fazer o registo. O nome de utilizador já existe.";
                     }
@@ -68,37 +83,85 @@ class ServerWorker implements Runnable {
                     this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
                 }
                 // TAREFA PARA EXECUÇÃO
-                else if (messageIn.type == 2) {
-                    try {
-                        byte[] result = JobFunction.execute(messageIn.content);
+                else if (messageIn.type == 2)
+                {
+                    waitingList.addMessage(messageIn);
 
-                        // Devolver resultado para o cliente
-                        Message messageOut = new Message(0, result,messageIn.numMensagem);
-                        this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
-                    } catch (JobFunctionException e) {
-                        String resposta =  "Servidor não consegui realizar a tarefa"+messageIn.numMensagem;
+                    List<Message> selected = waitingList.selectMessages(this.availability);
 
-                        // Devolver resultado para o cliente
-                        Message messageOut = new Message(1, resposta.getBytes(),messageIn.numMensagem);
-                        this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
+                    for (Message m: selected)
+                    {
+                        Thread thread = new Thread(() -> {
+                            try {
+                                executeJob(m, frameIn);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
                     }
                 }
-            }catch (IOException e){
+                // CONSULTAR MEMÓRIA DISPONÍVEL
+                else if (messageIn.type == 3)
+                {
+                    int mem = this.availability;
+                    String resposta = mem + " bytes de memória disponível";
+
+                    Message messageOut = new Message(1, resposta.getBytes(), messageIn.numMensagem);
+                    this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
+                }
+                // CONSULTAR TAREFAS EM FILA DE ESPERA
+                else if (messageIn.type == 4)
+                {
+                    int waiting = this.waitingList.getSize();
+                    String resposta = waiting + " tarefas em fila de espera";
+
+                    Message messageOut = new Message(1, resposta.getBytes(), messageIn.numMensagem);
+                    this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
+                }
+            }
+            catch (IOException e){
                 break;
             }
+        }
+    }
+
+    public void executeJob(Message m, TaggedConnection.Frame frameIn) throws IOException
+    {
+        try
+        {
+            this.availability -= m.size;
+
+            byte[] result = JobFunction.execute(m.content);
+
+            this.availability += m.size;
+
+            // Devolver resultado para o cliente
+            Message messageOut = new Message(0, result,m.numMensagem);
+            this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
+        }
+        catch (JobFunctionException e)
+        {
+            String resposta =  "Servidor não consegui realizar a tarefa"+ m.numMensagem;
+
+            // Devolver resultado para o cliente
+            Message messageOut = new Message(1, resposta.getBytes(), m.numMensagem);
+            this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));
         }
     }
 }
 
 
+
 public class Server {
-    public static void main(String[] args) throws IOException {
-        ServerSocket serverSocket = new ServerSocket(12346);
+    public static void main(String[] args) throws IOException
+    {
+        ServerSocket serverSocket = new ServerSocket(12345);
         Map<String, String> utilizadores = new HashMap<>();
+        WaitingList waitingList = new WaitingList();
 
         while (true) {
             Socket socket = serverSocket.accept();
-            Thread worker = new Thread(new ServerWorker(socket, utilizadores));
+            Thread worker = new Thread(new ServerWorker(socket, utilizadores, waitingList));
             worker.start();
         }
     }

@@ -59,6 +59,8 @@ public class Client {
     public void menu2() throws IOException, InterruptedException {
         lock.lock();
         System.out.println("\n1-Enviar tarefa");
+        System.out.println("2-Consultar memória disponível");
+        System.out.println("3-Consultar número de tarefas em fila de espera");
         System.out.println("0-Sair");
         System.out.print("Digite uma das opções: ");
 
@@ -70,8 +72,19 @@ public class Client {
                 lock.unlock();
                 sair();
                 break;
+
             case 1:
                 tarefa();
+                menu2();
+                break;
+
+            case 2:
+                check_mem();
+                menu2();
+                break;
+
+            case 3:
+                check_waiting();
                 menu2();
                 break;
 
@@ -98,7 +111,7 @@ public class Client {
         String s = username + "," + password;
         Message messageOut = new Message(0, s.getBytes(),numMensagem);
 
-        long numThread = Thread.currentThread().threadId();
+        long numThread = Thread.currentThread().getId();
         this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
         // Receber resultado do registo
@@ -120,7 +133,7 @@ public class Client {
         String s = username + "," + password;
         Message messageOut = new Message(1, s.getBytes(), numMensagem);
 
-        long numThread = Thread.currentThread().threadId();
+        long numThread = Thread.currentThread().getId();
         this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
         // Receber resultado da autenticação
@@ -168,7 +181,7 @@ public class Client {
                 lock.unlock();
 
                 try {
-                    long numThread = Thread.currentThread().threadId();
+                    long numThread = Thread.currentThread().getId();
                     this.des.send(new TaggedConnection.Frame(numThread, messageOut));
 
                     Message messageIn = this.des.receive(numThread);
@@ -197,13 +210,40 @@ public class Client {
         lock.unlock();
     }
 
+    public void check_mem() throws IOException, InterruptedException
+    {
+        String s = "";
+        Message messageOut = new Message(3, s.getBytes(), numMensagem);
+
+        long numThread = Thread.currentThread().getId();
+        this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+
+        Message messageIn = this.des.receive(numThread);
+
+        System.out.println(new String(messageIn.content));
+    }
+
+    public void check_waiting() throws IOException, InterruptedException
+    {
+        String s = "";
+        Message messageOut = new Message(4, s.getBytes(), numMensagem);
+
+        long numThread = Thread.currentThread().getId();
+        this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+
+        Message messageIn = this.des.receive(numThread);
+
+        System.out.println(new String(messageIn.content));
+    }
+
+
     /* ------------------------------------------------------
                             MAIN
     ------------------------------------------------------ */
 
     public static void main(String[] args) {
         try {
-            Client client=new Client();
+            Client client = new Client();
             client.menu1();
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);

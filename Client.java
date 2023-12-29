@@ -79,12 +79,25 @@ public class Client {
                 break;
 
             case 2:
-                check_mem();
+                lock.unlock();
+                new Thread(() -> {
+                    try {
+                        check_mem();
+                    } catch (IOException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
                 menu2();
                 break;
-
             case 3:
-                check_waiting();
+                lock.unlock();
+                new Thread(() -> {
+                    try {
+                        check_waiting();
+                    } catch (IOException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
                 menu2();
                 break;
 
@@ -220,7 +233,9 @@ public class Client {
 
         Message messageIn = this.des.receive(numThread);
 
-        System.out.println(new String(messageIn.content));
+        lock.lock();
+        System.out.println("\n"+new String(messageIn.content));
+        lock.unlock();
     }
 
     public void check_waiting() throws IOException, InterruptedException
@@ -233,7 +248,9 @@ public class Client {
 
         Message messageIn = this.des.receive(numThread);
 
-        System.out.println(new String(messageIn.content));
+        lock.lock();
+        System.out.println("\n"+new String(messageIn.content));
+        lock.unlock();
     }
 
 

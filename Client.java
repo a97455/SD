@@ -172,7 +172,7 @@ public class Client {
             try {
                 lock.lock();
                 // Ler input do utilizador
-                System.out.println("Caminho para o ficheiro a executar: ");
+                System.out.println("\nCaminho para o ficheiro a executar: ");
                 Path path1 = Paths.get(this.scanner.nextLine());
 
                 System.out.println("Caminho para o ficheiro com o resultado: ");
@@ -188,7 +188,7 @@ public class Client {
 
                 Message messageOut = new Message(2, size, content, numTarefa);
 
-                System.out.println("Pedido " + numTarefa + " foi enviado");
+                System.out.println("Pedido " + numTarefa + " foi enviado\n");
 
                 this.cond.signal();
                 lock.unlock();
@@ -204,7 +204,7 @@ public class Client {
                         Files.write(path2, messageIn.content);
 
                         lock.lock();
-                        System.out.println("\nPedido " + numTarefa + " terminado com sucesso.");
+                        System.out.println("\nPedido " + numTarefa + " terminado com sucesso.\n");
                         lock.unlock();
                     }else{
                         lock.lock();
@@ -212,7 +212,7 @@ public class Client {
                         lock.unlock();
                     }
                 }catch (IOException e){
-                    System.out.println("\nPedido " + numTarefa + " não terminado");
+                    System.out.println("\nPedido " + numTarefa + " não terminado\n");
                 }
             }catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
@@ -229,7 +229,7 @@ public class Client {
         int numTarefa = ++numMensagem;
         Message messageOut = new Message(3, s.getBytes(), numMensagem);
 
-        System.out.println("Pedido " + numTarefa + " foi enviado");
+        System.out.println("\nPedido " + numTarefa + " foi enviado\n");
 
         this.cond.signal();
         lock.unlock();
@@ -241,11 +241,11 @@ public class Client {
             Message messageIn = this.des.receive(numThread);
 
             lock.lock();
-            System.out.println("\nPedido " + numTarefa + " terminado com sucesso. ");
-            System.out.println(new String(messageIn.content));
+            System.out.println("\nPedido " + numTarefa + " terminado com sucesso.");
+            System.out.println(new String(messageIn.content)+"\n");
             lock.unlock();
         }catch (IOException e){
-            System.out.println("\nPedido " + numTarefa + " não terminado");
+            System.out.println("\nPedido " + numTarefa + " não terminado\n");
         }
 
     }
@@ -256,7 +256,7 @@ public class Client {
         int numTarefa = ++numMensagem;
         Message messageOut = new Message(4, s.getBytes(), numMensagem);
 
-        System.out.println("Pedido " + numTarefa + " foi enviado");
+        System.out.println("\nPedido " + numTarefa + " foi enviado\n");
 
         this.cond.signal();
         lock.unlock();
@@ -269,10 +269,10 @@ public class Client {
 
             lock.lock();
             System.out.println("\nPedido " + numTarefa + " terminado com sucesso. ");
-            System.out.println(new String(messageIn.content));
+            System.out.println(new String(messageIn.content)+"\n");
             lock.unlock();
         }catch (IOException e){
-            System.out.println("\nPedido " + numTarefa + " não terminado");
+            System.out.println("\nPedido " + numTarefa + " não terminado\n");
         }
 
     }

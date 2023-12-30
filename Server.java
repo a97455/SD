@@ -150,6 +150,8 @@ class ServerWorker implements Runnable
         {
             String resposta =  "Servidor não consegui realizar a tarefa"+ m.numMensagem;
 
+            this.availability += m.size;
+
             // Devolver resultado para o cliente
             Message messageOut = new Message(1, resposta.getBytes(), m.numMensagem);
             this.tagged.send(new TaggedConnection.Frame(frameIn.tag,messageOut));

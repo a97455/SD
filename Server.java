@@ -110,7 +110,9 @@ class ServerWorker implements Runnable
                 // CONSULTAR MEMÓRIA DISPONÍVEL
                 else if (messageIn.type == 3)
                 {
+                    tarefaLock.lock();
                     int mem = this.availability;
+                    tarefaLock.unlock();
                     String resposta = mem + " bytes de memória disponível";
 
                     Message messageOut = new Message(1, resposta.getBytes(), messageIn.numMensagem);
@@ -119,7 +121,9 @@ class ServerWorker implements Runnable
                 // CONSULTAR TAREFAS EM FILA DE ESPERA
                 else if (messageIn.type == 4)
                 {
+                    tarefaLock.lock();
                     int waiting = this.waitingList.getSize();
+                    tarefaLock.unlock();
                     String resposta = waiting + " tarefas em fila de espera";
 
                     Message messageOut = new Message(1, resposta.getBytes(), messageIn.numMensagem);

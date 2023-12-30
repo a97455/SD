@@ -3,6 +3,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.net.Socket;
+import java.util.InputMismatchException;
 import java.util.Scanner;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -36,23 +37,29 @@ public class Client {
         System.out.println("0-Sair");
         System.out.print("Digite uma das opções: ");
 
-        int option = this.scanner.nextInt();
-        this.scanner.nextLine();
+        try {
+            int option = this.scanner.nextInt();
+            this.scanner.nextLine();
 
-        switch (option) {
-            case 0:
-                sair();
-                break;
-            case 1:
-                registo();
-                break;
-            case 2:
-                autenticacao();
-                break;
+            switch (option) {
+                case 0:
+                    sair();
+                    break;
+                case 1:
+                    registo();
+                    break;
+                case 2:
+                    autenticacao();
+                    break;
 
-            default:
-                System.out.println("Opção inválida.");
-                break;
+                default:
+                    System.out.println("Opção inválida.");
+                    break;
+            }
+        } catch (InputMismatchException e) {
+            System.out.println("Por favor, digite um número válido.");
+            this.scanner.nextLine();
+            menu1();
         }
     }
 
@@ -64,50 +71,58 @@ public class Client {
         System.out.println("0-Sair");
         System.out.print("Digite uma das opções: ");
 
-        int option = this.scanner.nextInt();
-        this.scanner.nextLine();
+        try {
+            int option = this.scanner.nextInt();
+            this.scanner.nextLine();
 
-        switch (option) {
-            case 0:
-                lock.unlock();
-                sair();
-                break;
+            switch (option) {
+                case 0:
+                    lock.unlock();
+                    sair();
+                    break;
 
-            case 1:
-                tarefa();
-                menu2();
-                break;
+                case 1:
+                    tarefa();
+                    menu2();
+                    break;
 
-            case 2:
-                new Thread(() -> {
-                    try {
-                        check_mem();
-                    } catch (IOException | InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }).start();
-                this.cond.await();
-                lock.unlock();
-                menu2();
-                break;
-            case 3:
-                new Thread(() -> {
-                    try {
-                        check_waiting();
-                    } catch (IOException | InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }).start();
-                this.cond.await();
-                lock.unlock();
-                menu2();
-                break;
+                case 2:
+                    new Thread(() -> {
+                        try {
+                            check_mem();
+                        } catch (IOException | InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).start();
+                    this.cond.await();
+                    lock.unlock();
+                    menu2();
+                    break;
 
-            default:
-                System.out.println("Opção inválida.");
-                lock.unlock();
-                menu2();
-                break;
+                case 3:
+                    new Thread(() -> {
+                        try {
+                            check_waiting();
+                        } catch (IOException | InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).start();
+                    this.cond.await();
+                    lock.unlock();
+                    menu2();
+                    break;
+
+                default:
+                    System.out.println("Opção inválida. Por favor, escolha uma opção válida.");
+                    lock.unlock();
+                    menu2();
+                    break;
+            }
+        } catch (InputMismatchException e) {
+            System.out.println("Entrada inválida. Por favor, digite um número correspondente à opção desejada.");
+            this.scanner.nextLine(); // Limpa o buffer do scanner
+            lock.unlock();
+            menu2();
         }
     }
 
@@ -174,6 +189,11 @@ public class Client {
                 // Ler input do utilizador
                 System.out.println("\nCaminho para o ficheiro a executar: ");
                 Path path1 = Paths.get(this.scanner.nextLine());
+                if (Files.exists(path1)) {
+
+                } else {
+                    System.out.println("O arquivo não existe ou o caminho é inválido.");
+                }
 
                 System.out.println("Caminho para o ficheiro com o resultado: ");
                 Path path2 = Paths.get(this.scanner.nextLine());

@@ -148,7 +148,7 @@ class ServerWorker implements Runnable
         }
         catch (JobFunctionException e)
         {
-            String resposta =  "Servidor não consegui realizar a tarefa"+ m.numMensagem;
+            String resposta =  "Servidor não consegui realizar a tarefa " + m.numMensagem + ", código =" + e.getCode() + " message =" + e.getMessage();
 
             this.availability += m.size;
 

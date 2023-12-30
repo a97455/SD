@@ -79,7 +79,6 @@ public class Client {
                 break;
 
             case 2:
-                lock.unlock();
                 new Thread(() -> {
                     try {
                         check_mem();
@@ -87,10 +86,11 @@ public class Client {
                         throw new RuntimeException(e);
                     }
                 }).start();
+                this.cond.await();
+                lock.unlock();
                 menu2();
                 break;
             case 3:
-                lock.unlock();
                 new Thread(() -> {
                     try {
                         check_waiting();
@@ -98,6 +98,8 @@ public class Client {
                         throw new RuntimeException(e);
                     }
                 }).start();
+                this.cond.await();
+                lock.unlock();
                 menu2();
                 break;
 
@@ -184,11 +186,9 @@ public class Client {
                 byte[] content = Files.readAllBytes(path1);
                 int numTarefa = ++numMensagem;
 
-
-
                 Message messageOut = new Message(2, size, content, numTarefa);
 
-                System.out.println("A Tarefa " + numTarefa + " foi enviada");
+                System.out.println("Pedido " + numTarefa + " foi enviado");
 
                 this.cond.signal();
                 lock.unlock();
@@ -204,7 +204,7 @@ public class Client {
                         Files.write(path2, messageIn.content);
 
                         lock.lock();
-                        System.out.println("\nTarefa " + numTarefa + " terminada com sucesso.");
+                        System.out.println("\nPedido " + numTarefa + " terminado com sucesso.");
                         lock.unlock();
                     }else{
                         lock.lock();
@@ -212,7 +212,7 @@ public class Client {
                         lock.unlock();
                     }
                 }catch (IOException e){
-                    System.out.println("\nTarefa " + numTarefa + " não terminada");
+                    System.out.println("\nPedido " + numTarefa + " não terminado");
                 }
             }catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
@@ -223,34 +223,58 @@ public class Client {
         lock.unlock();
     }
 
-    public void check_mem() throws IOException, InterruptedException
-    {
+    public void check_mem() throws IOException, InterruptedException {
+        lock.lock();
         String s = "";
+        int numTarefa = ++numMensagem;
         Message messageOut = new Message(3, s.getBytes(), numMensagem);
 
-        long numThread = Thread.currentThread().getId();
-        this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+        System.out.println("Pedido " + numTarefa + " foi enviado");
 
-        Message messageIn = this.des.receive(numThread);
-
-        lock.lock();
-        System.out.println("\n"+new String(messageIn.content));
+        this.cond.signal();
         lock.unlock();
+
+        try{
+            long numThread = Thread.currentThread().getId();
+            this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+
+            Message messageIn = this.des.receive(numThread);
+
+            lock.lock();
+            System.out.println("\nPedido " + numTarefa + " terminado com sucesso. ");
+            System.out.println(new String(messageIn.content));
+            lock.unlock();
+        }catch (IOException e){
+            System.out.println("\nPedido " + numTarefa + " não terminado");
+        }
+
     }
 
-    public void check_waiting() throws IOException, InterruptedException
-    {
+    public void check_waiting() throws IOException, InterruptedException {
+        lock.lock();
         String s = "";
+        int numTarefa = ++numMensagem;
         Message messageOut = new Message(4, s.getBytes(), numMensagem);
 
-        long numThread = Thread.currentThread().getId();
-        this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+        System.out.println("Pedido " + numTarefa + " foi enviado");
 
-        Message messageIn = this.des.receive(numThread);
-
-        lock.lock();
-        System.out.println("\n"+new String(messageIn.content));
+        this.cond.signal();
         lock.unlock();
+
+        try {
+            long numThread = Thread.currentThread().getId();
+            this.des.send(new TaggedConnection.Frame(numThread, messageOut));
+
+            Message messageIn = this.des.receive(numThread);
+
+            lock.lock();
+            System.out.println("\nPedido " + numTarefa + " terminado com sucesso. ");
+            System.out.println(new String(messageIn.content));
+            lock.unlock();
+        }catch (IOException e){
+            System.out.println("\nPedido " + numTarefa + " não terminado");
+        }
+
     }
 
 
